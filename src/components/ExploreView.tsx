@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
-import { ArrowRight, Bell, BookOpen, Clock, Compass, MapPin, Route } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, Bell, BookOpen, Clock, Compass, MapPin, Pause, Play, Route } from 'lucide-react';
 import { ROUTES_DATA, SPOTS, Spot } from '../types';
 import ImageWithFallback from './ImageWithFallback';
 import SpotDetailView from './SpotDetailView';
+import { publicAsset } from '../lib/assets';
 
 interface ExploreViewProps {
   onNavigateRoutes: () => void;
@@ -32,6 +33,9 @@ const insightCards = [
 
 export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSpotId, onSpotOpened }: ExploreViewProps) {
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [musicHint, setMusicHint] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const openSpot = (spot: Spot) => {
     onMarkVisited(spot.id);
@@ -46,6 +50,26 @@ export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSp
     openSpot(targetSpot);
     onSpotOpened?.();
   }, [initialSpotId, onSpotOpened]);
+
+  const toggleMusic = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      if (audioRef.current.paused) {
+        await audioRef.current.play();
+        setIsMusicPlaying(true);
+        setMusicHint('Music on');
+        return;
+      }
+
+      audioRef.current.pause();
+      setIsMusicPlaying(false);
+      setMusicHint('Music paused');
+    } catch {
+      setIsMusicPlaying(false);
+      setMusicHint('Add music file first');
+    }
+  };
 
   return (
     <div className="relative space-y-8 pb-8">
@@ -88,6 +112,7 @@ export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSp
         </div>
 
         <div className="relative h-[28rem] overflow-hidden bg-stone-100">
+          <audio ref={audioRef} src={publicAsset('/audio/maple-bridge-bgm.mp3')} loop preload="none" />
           <ImageWithFallback
             src={SPOTS[0].image}
             alt="Maple Bridge first view"
@@ -102,12 +127,32 @@ export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSp
             <p className="mt-1 font-serif text-lg font-bold text-stone-900">枫桥 · 寒山寺</p>
           </div>
 
-          <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-black/35 p-5 text-white backdrop-blur-sm">
+          <div className="absolute bottom-5 left-5 right-24 rounded-3xl bg-black/35 p-5 text-white backdrop-blur-sm">
             <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-white/65">First Main View</p>
             <h3 className="mt-1 font-serif text-3xl font-bold">枫桥</h3>
             <p className="mt-2 font-sans text-xs leading-5 text-white/75">
               The first frame uses Maple Bridge as the hero image. Open detailed spots from the next frame below.
             </p>
+          </div>
+
+          <div className="absolute bottom-5 right-5 z-10 flex flex-col items-end gap-2">
+            {musicHint && (
+              <motion.span
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-full bg-white/85 px-3 py-1 font-sans text-[10px] font-bold uppercase tracking-widest text-stone-600 shadow-sm backdrop-blur"
+              >
+                {musicHint}
+              </motion.span>
+            )}
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={toggleMusic}
+              className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-heritage-red text-white shadow-2xl"
+              aria-label={isMusicPlaying ? 'Pause background music' : 'Play background music'}
+            >
+              {isMusicPlaying ? <Pause className="h-6 w-6" /> : <Play className="ml-0.5 h-6 w-6" />}
+            </motion.button>
           </div>
         </div>
       </section>
