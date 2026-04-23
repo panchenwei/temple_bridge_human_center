@@ -1,14 +1,23 @@
 import { motion } from 'motion/react';
-import { Compass, Route, Stamp, BookOpen } from 'lucide-react';
+import { Compass, Route, Stamp, BookOpen, Pause, Play } from 'lucide-react';
 import { AppView } from '../types';
 import { cn } from '../lib/utils';
 
 interface BottomNavProps {
   currentView: AppView;
   onViewChange: (view: AppView) => void;
+  isMusicPlaying: boolean;
+  showMusicControl: boolean;
+  onToggleMusic: () => void;
 }
 
-export default function BottomNav({ currentView, onViewChange }: BottomNavProps) {
+export default function BottomNav({
+  currentView,
+  onViewChange,
+  isMusicPlaying,
+  showMusicControl,
+  onToggleMusic,
+}: BottomNavProps) {
   const items = [
     { id: AppView.EXPLORE, label: 'Explore', icon: Compass },
     { id: AppView.ROUTES, label: 'Routes', icon: Route },
@@ -18,6 +27,17 @@ export default function BottomNav({ currentView, onViewChange }: BottomNavProps)
 
   return (
     <nav className="fixed bottom-0 left-0 w-full h-24 glass-nav border-t border-gray-100 z-50 flex justify-around items-center px-4 pb-4 shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+      {showMusicControl && (
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={onToggleMusic}
+          className="absolute -top-6 right-6 flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-heritage-red text-white shadow-xl"
+          aria-label={isMusicPlaying ? 'Pause background music' : 'Play background music'}
+        >
+          {isMusicPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
+        </motion.button>
+      )}
+
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = currentView === item.id;

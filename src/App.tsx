@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppView, ChallengeReward, INITIAL_PROGRESS, JourneyProgress } from './types';
 import TopBar from './components/TopBar';
 import BottomNav from './components/BottomNav';
@@ -12,6 +12,7 @@ import RoutesView from './components/RoutesView';
 import StampsView from './components/StampsView';
 import ProfileView from './components/ProfileView';
 import SearchOverlay from './components/SearchOverlay';
+import { publicAsset } from './lib/assets';
 
 const STORAGE_KEY = 'maple-bridge-progress-v1';
 
@@ -25,6 +26,8 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingSpotId, setPendingSpotId] = useState<string | null>(null);
   const [pendingRouteId, setPendingRouteId] = useState<string | null>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [musicHint, setMusicHint] = useState<string | null>(null);
   const [progress, setProgress] = useState<JourneyProgress>(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -33,10 +36,17 @@ export default function App() {
       return INITIAL_PROGRESS;
     }
   });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   }, [progress]);
+
+  useEffect(() => {
+    if (!musicHint) return;
+    const timer = window.setTimeout(() => setMusicHint(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [musicHint]);
 
   const completeChallenge = (reward: ChallengeReward) => {
     setProgress((current) => {
@@ -59,6 +69,26 @@ export default function App() {
     }));
   };
 
+  const toggleMusic = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      if (audioRef.current.paused) {
+        await audioRef.current.play();
+        setIsMusicPlaying(true);
+        setMusicHint('Music on');
+        return;
+      }
+
+      audioRef.current.pause();
+      setIsMusicPlaying(false);
+      setMusicHint('Music paused');
+    } catch {
+      setIsMusicPlaying(false);
+      setMusicHint('Add music file first');
+    }
+  };
+
   const renderView = () => {
     switch (currentView) {
       case AppView.EXPLORE:
@@ -68,6 +98,9 @@ export default function App() {
             onMarkVisited={markVisitedSpot}
             initialSpotId={pendingSpotId}
             onSpotOpened={() => setPendingSpotId(null)}
+            isMusicPlaying={isMusicPlaying}
+            musicHint={musicHint}
+            onToggleMusic={toggleMusic}
           />
         );
       case AppView.ROUTES:
@@ -91,6 +124,9 @@ export default function App() {
             onMarkVisited={markVisitedSpot}
             initialSpotId={pendingSpotId}
             onSpotOpened={() => setPendingSpotId(null)}
+            isMusicPlaying={isMusicPlaying}
+            musicHint={musicHint}
+            onToggleMusic={toggleMusic}
           />
         );
     }
@@ -98,6 +134,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-32 xuan-paper relative overflow-x-hidden">
+      <audio ref={audioRef} src={publicAsset('/audio/maple-bridge-bgm.mp3')} loop preload="none" />
       {/* Ink Background Accents */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-heritage-ink/5 blur-[120px] rounded-full" />
@@ -109,7 +146,13 @@ export default function App() {
       <main className="max-w-xl mx-auto px-6 pt-20 relative z-10">
         {renderView()}
       </main>
-      <BottomNav currentView={currentView} onViewChange={setCurrentView} />
+      <BottomNav
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        isMusicPlaying={isMusicPlaying}
+        showMusicControl={currentView !== AppView.EXPLORE}
+        onToggleMusic={toggleMusic}
+      />
       <SearchOverlay
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}

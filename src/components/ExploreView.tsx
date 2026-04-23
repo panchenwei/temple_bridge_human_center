@@ -1,16 +1,18 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Bell, BookOpen, Clock, Compass, MapPin, Pause, Play, Route } from 'lucide-react';
 import { ROUTES_DATA, SPOTS, Spot } from '../types';
 import ImageWithFallback from './ImageWithFallback';
 import SpotDetailView from './SpotDetailView';
-import { publicAsset } from '../lib/assets';
 
 interface ExploreViewProps {
   onNavigateRoutes: () => void;
   onMarkVisited: (spotId: string) => void;
   initialSpotId?: string | null;
   onSpotOpened?: () => void;
+  isMusicPlaying: boolean;
+  musicHint: string | null;
+  onToggleMusic: () => void;
 }
 
 const insightCards = [
@@ -31,11 +33,16 @@ const insightCards = [
   },
 ];
 
-export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSpotId, onSpotOpened }: ExploreViewProps) {
+export default function ExploreView({
+  onNavigateRoutes,
+  onMarkVisited,
+  initialSpotId,
+  onSpotOpened,
+  isMusicPlaying,
+  musicHint,
+  onToggleMusic,
+}: ExploreViewProps) {
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-  const [musicHint, setMusicHint] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const openSpot = (spot: Spot) => {
     onMarkVisited(spot.id);
@@ -50,26 +57,6 @@ export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSp
     openSpot(targetSpot);
     onSpotOpened?.();
   }, [initialSpotId, onSpotOpened]);
-
-  const toggleMusic = async () => {
-    if (!audioRef.current) return;
-
-    try {
-      if (audioRef.current.paused) {
-        await audioRef.current.play();
-        setIsMusicPlaying(true);
-        setMusicHint('Music on');
-        return;
-      }
-
-      audioRef.current.pause();
-      setIsMusicPlaying(false);
-      setMusicHint('Music paused');
-    } catch {
-      setIsMusicPlaying(false);
-      setMusicHint('Add music file first');
-    }
-  };
 
   return (
     <div className="relative space-y-8 pb-8">
@@ -112,7 +99,6 @@ export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSp
         </div>
 
         <div className="relative h-[28rem] overflow-hidden bg-stone-100">
-          <audio ref={audioRef} src={publicAsset('/audio/maple-bridge-bgm.mp3')} loop preload="none" />
           <ImageWithFallback
             src={SPOTS[0].image}
             alt="Maple Bridge first view"
@@ -147,7 +133,7 @@ export default function ExploreView({ onNavigateRoutes, onMarkVisited, initialSp
             )}
             <motion.button
               whileTap={{ scale: 0.92 }}
-              onClick={toggleMusic}
+              onClick={onToggleMusic}
               className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-heritage-red text-white shadow-2xl"
               aria-label={isMusicPlaying ? 'Pause background music' : 'Play background music'}
             >
