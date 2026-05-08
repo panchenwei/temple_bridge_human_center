@@ -4,14 +4,17 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { AppView, ChallengeReward, INITIAL_PROGRESS, JourneyProgress } from './types';
+import { AiGuideContext, AppView, ChallengeReward, INITIAL_PROGRESS, JourneyProgress, UserProfile } from './types';
 import TopBar from './components/TopBar';
 import BottomNav from './components/BottomNav';
 import ExploreView from './components/ExploreView';
 import RoutesView from './components/RoutesView';
 import StampsView from './components/StampsView';
 import ProfileView from './components/ProfileView';
+import CommunityView from './components/CommunityView';
 import SearchOverlay from './components/SearchOverlay';
+import AiGuideWidget from './components/AiGuideWidget';
+import { api, getAuthToken, setAuthToken } from './lib/api';
 import { publicAsset } from './lib/assets';
 
 const STORAGE_KEY = 'maple-bridge-progress-v1';
@@ -21,6 +24,39 @@ function uniquePush(list: string[], value?: string) {
   return [...list, value];
 }
 
+function getViewGuideContext(view: AppView): AiGuideContext {
+  switch (view) {
+    case AppView.ROUTES:
+      return {
+        view: 'routes',
+        routeTitle: 'Heritage Walk',
+        description: 'Recommended walking routes through Maple Bridge, Hanshan Temple, poetry landmarks, and canal culture.',
+      };
+    case AppView.COMMUNITY:
+      return {
+        view: 'community',
+        description: 'Community check-in page for route photos, comments, and private messages.',
+      };
+    case AppView.STAMPS:
+      return {
+        view: 'stamps',
+        description: 'Calligraphy seal and poetry challenge page for the heritage journey.',
+      };
+    case AppView.PROFILE:
+      return {
+        view: 'profile',
+        description: 'Personal journey page with avatar, progress, and private message inbox.',
+      };
+    case AppView.EXPLORE:
+    default:
+      return {
+        view: 'explore',
+        spotName: 'Maple Bridge and Hanshan Temple area',
+        description: 'Main exploration page for Maple Bridge heritage, temple bells, poetry, and Grand Canal culture.',
+      };
+  }
+}
+
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(AppView.EXPLORE);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -28,6 +64,10 @@ export default function App() {
   const [pendingRouteId, setPendingRouteId] = useState<string | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [musicHint, setMusicHint] = useState<string | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [aiGuideContext, setAiGuideContext] = useState<AiGuideContext>(() => getViewGuideContext(AppView.EXPLORE));
+  const [aiGuideForceClosedKey, setAiGuideForceClosedKey] = useState(0);
   const [progress, setProgress] = useState<JourneyProgress>(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -38,9 +78,29 @@ export default function App() {
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const forceCloseAiGuide = () => {
+    setAiGuideForceClosedKey((current) => current + 1);
+  };
+
+  useEffect(() => {
+    if (!getAuthToken()) {
+      setAuthReady(true);
+      return;
+    }
+
+    api.me()
+      .then((result) => setUser(result.user))
+      .catch(() => setAuthToken(null))
+      .finally(() => setAuthReady(true));
+  }, []);
+
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   }, [progress]);
+
+  useEffect(() => {
+    setAiGuideContext(getViewGuideContext(currentView));
+  }, [currentView]);
 
   useEffect(() => {
     if (!musicHint) return;
@@ -96,6 +156,7 @@ export default function App() {
           <ExploreView
             onNavigateRoutes={() => setCurrentView(AppView.ROUTES)}
             onMarkVisited={markVisitedSpot}
+            onAiContextChange={setAiGuideContext}
             initialSpotId={pendingSpotId}
             onSpotOpened={() => setPendingSpotId(null)}
             isMusicPlaying={isMusicPlaying}
@@ -109,19 +170,31 @@ export default function App() {
             progress={progress}
             onCompleteChallenge={completeChallenge}
             onMarkVisited={markVisitedSpot}
+            onAiContextChange={setAiGuideContext}
+            onAiForceClose={forceCloseAiGuide}
             initialRouteId={pendingRouteId}
             onRouteOpened={() => setPendingRouteId(null)}
           />
         );
       case AppView.STAMPS:
         return <StampsView progress={progress} onCompleteChallenge={completeChallenge} />;
+      case AppView.COMMUNITY:
+        return <CommunityView user={user} onUserChange={setUser} />;
       case AppView.PROFILE:
-        return <ProfileView progress={progress} onCompleteChallenge={completeChallenge} />;
+        return (
+          <ProfileView
+            progress={progress}
+            user={user}
+            onUserChange={setUser}
+            onCompleteChallenge={completeChallenge}
+          />
+        );
       default:
         return (
           <ExploreView
             onNavigateRoutes={() => setCurrentView(AppView.ROUTES)}
             onMarkVisited={markVisitedSpot}
+            onAiContextChange={setAiGuideContext}
             initialSpotId={pendingSpotId}
             onSpotOpened={() => setPendingSpotId(null)}
             isMusicPlaying={isMusicPlaying}
@@ -142,9 +215,16 @@ export default function App() {
         <div className="absolute top-1/2 left-0 w-32 h-64 bg-heritage-ink/3 blur-[60px] -translate-x-1/2 rotate-12" />
       </div>
 
-      <TopBar onOpenSearch={() => setIsSearchOpen(true)} />
+      <TopBar
+        user={user}
+        onOpenSearch={() => {
+          forceCloseAiGuide();
+          setIsSearchOpen(true);
+        }}
+        onOpenProfile={() => setCurrentView(AppView.PROFILE)}
+      />
       <main className="max-w-xl mx-auto px-6 pt-20 relative z-10">
-        {renderView()}
+        {authReady ? renderView() : null}
       </main>
       <BottomNav
         currentView={currentView}
@@ -153,6 +233,7 @@ export default function App() {
         showMusicControl={currentView !== AppView.EXPLORE}
         onToggleMusic={toggleMusic}
       />
+      <AiGuideWidget context={aiGuideContext} forceClosedKey={aiGuideForceClosedKey} />
       <SearchOverlay
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}

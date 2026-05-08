@@ -1,15 +1,31 @@
 import { motion } from 'motion/react';
+import { useEffect } from 'react';
 import { ArrowRight, BookOpen, ChevronLeft, History, MapPin, Sparkles } from 'lucide-react';
-import { Spot } from '../types';
+import { AiGuideContext, Spot } from '../types';
 import ImageWithFallback from './ImageWithFallback';
 
 interface SpotDetailViewProps {
   spot: Spot;
+  onAiContextChange: (context: AiGuideContext) => void;
   onClose: () => void;
   onNextRoute: () => void;
 }
 
-export default function SpotDetailView({ spot, onClose, onNextRoute }: SpotDetailViewProps) {
+function getSpotGuideContext(spot: Spot): AiGuideContext {
+  return {
+    view: 'spot-detail',
+    spotName: `${spot.chineseName} ${spot.name}`,
+    description: spot.description,
+    story: `${spot.whyMatters}\n${spot.story}`,
+    poem: spot.poem,
+  };
+}
+
+export default function SpotDetailView({ spot, onAiContextChange, onClose, onNextRoute }: SpotDetailViewProps) {
+  useEffect(() => {
+    onAiContextChange(getSpotGuideContext(spot));
+  }, [onAiContextChange, spot]);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: '100%' }}

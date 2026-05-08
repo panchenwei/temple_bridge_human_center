@@ -1,8 +1,71 @@
 export enum AppView {
   EXPLORE = 'explore',
   ROUTES = 'routes',
+  COMMUNITY = 'community',
   STAMPS = 'stamps',
   PROFILE = 'profile',
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
+export interface CommunityComment {
+  id: string;
+  postId: string;
+  userId: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  userId: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  content: string;
+  imageUrl?: string;
+  locationName?: string;
+  createdAt: string;
+  comments: CommunityComment[];
+}
+
+export interface DirectMessage {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface MessageConversation {
+  participant: UserProfile;
+  lastMessage: DirectMessage;
+  updatedAt: string;
+}
+
+export interface AiGuideMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface AiGuideContext {
+  view: string;
+  routeTitle?: string;
+  spotName?: string;
+  markerName?: string;
+  description?: string;
+  story?: string;
+  poem?: string;
+  coordinates?: [number, number];
 }
 
 export interface Spot {
@@ -28,6 +91,7 @@ export interface RouteMarker {
   description: string;
   story: string;
   poem?: string;
+  lnglat: [number, number];
   x: number;
   y: number;
   challengeId: string;
@@ -43,6 +107,8 @@ export interface RouteDetail {
   bestFor: string;
   markers: RouteMarker[];
   mapImage: string;
+  mapCenter?: [number, number];
+  mapZoom?: number;
 }
 
 export interface JourneyProgress {
@@ -140,6 +206,8 @@ export const ROUTES_DATA: RouteDetail[] = [
     bestFor: 'First-time visitors with limited time',
     description: 'A compact introduction to the bridge, temple bell, and canal view.',
     mapImage: '/images/maps/quick-visit-map.jpg',
+    mapCenter: [120.569934, 31.310628],
+    mapZoom: 16,
     markers: [
       {
         id: 'maple-bridge-stop',
@@ -147,6 +215,7 @@ export const ROUTES_DATA: RouteDetail[] = [
         chineseName: '枫桥观景点',
         description: 'Start from the poetic bridge view and understand the site orientation.',
         story: 'Stand beside the bridge and compare the current canal view with the night scene described by Zhang Ji.',
+        lnglat: [120.567015, 31.310857],
         poem: '月落乌啼霜满天',
         x: 42,
         y: 58,
@@ -158,6 +227,7 @@ export const ROUTES_DATA: RouteDetail[] = [
         chineseName: '寒山钟楼',
         description: 'Listen for the cultural meaning of the midnight bell.',
         story: 'The 108 bell rings are connected with Buddhist ideas of releasing worldly worries.',
+        lnglat: [120.569324, 31.308586],
         poem: '夜半钟声到客船',
         x: 64,
         y: 36,
@@ -169,6 +239,7 @@ export const ROUTES_DATA: RouteDetail[] = [
         chineseName: '运河码头',
         description: 'Finish at the water edge and connect poetry with canal trade.',
         story: 'The pier helps visitors understand that the poem was born from real movement, boats, markets, and night travel.',
+        lnglat: [120.573463, 31.31144],
         x: 52,
         y: 76,
         challengeId: 'story-canal-pier',
@@ -184,6 +255,8 @@ export const ROUTES_DATA: RouteDetail[] = [
     bestFor: 'Visitors interested in poetry and atmosphere',
     description: 'Follow the imagery of moon, frost, fishing lights, temple, and bell.',
     mapImage: '/images/maps/poetry-route-map.jpg',
+    mapCenter: [120.5682, 31.309784],
+    mapZoom: 16,
     markers: [
       {
         id: 'poem-wall-stop',
@@ -191,6 +264,7 @@ export const ROUTES_DATA: RouteDetail[] = [
         chineseName: '诗碑廊',
         description: 'Read the poem as a route map instead of only a text.',
         story: 'Each image in the poem corresponds to a sensory clue: moonlight, bird call, frost, river maple, fishing fire, and bell.',
+        lnglat: [120.569398, 31.30811],
         poem: '江枫渔火对愁眠',
         x: 48,
         y: 48,
@@ -201,6 +275,7 @@ export const ROUTES_DATA: RouteDetail[] = [
         name: 'Jiangfeng Riverside',
         chineseName: '江枫水岸',
         description: 'A quiet riverside point for connecting landscape and emotion.',
+        lnglat: [120.567203, 31.31105],
         story: 'The riverbank turns the poem’s homesickness into a visible scene: water, lights, silence, and distance.',
         x: 38,
         y: 70,
@@ -212,6 +287,7 @@ export const ROUTES_DATA: RouteDetail[] = [
         chineseName: '寒山寺庭院',
         description: 'End in the temple courtyard and unlock the bell story.',
         story: 'The temple transforms the route from sightseeing into a cultural memory of sound.',
+        lnglat: [120.568, 31.310191],
         poem: '姑苏城外寒山寺',
         x: 66,
         y: 34,
@@ -228,6 +304,8 @@ export const ROUTES_DATA: RouteDetail[] = [
     bestFor: 'Local residents and deeper cultural rediscovery',
     description: 'Trace the canal functions behind the poetic fame: gates, trade, transport, and defense.',
     mapImage: '/images/maps/grand-canal-route-map.jpg',
+    mapCenter: [120.567449, 31.309638],
+    mapZoom: 16,
     markers: [
       {
         id: 'tieling-pass-stop',
@@ -235,26 +313,29 @@ export const ROUTES_DATA: RouteDetail[] = [
         chineseName: '铁铃关',
         description: 'Understand how defense and waterways shaped the area.',
         story: 'Tieling Pass reveals a practical side of the scenic area: controlling routes, protecting trade, and guarding the city.',
+        lnglat: [120.567154, 31.310831],
         x: 34,
         y: 66,
         challengeId: 'story-tieling-pass',
       },
       {
         id: 'old-market-stop',
-        name: 'Old Rice Market Memory',
-        chineseName: '旧米市记忆',
-        description: 'Discover why “asking the Maple Bridge price” became a commercial phrase.',
-        story: 'Ming and Qing merchants gathered around the canal. Prices, boats, grain, and bridge traffic formed a busy market system.',
+        name: 'Canal Transport Culture Exhibition',
+        chineseName: '漕运文化展示',
+        description: 'Explore how canal transport supported trade, grain movement, and daily life around Maple Bridge.',
+        story: 'The exhibition turns the canal from a background waterway into a readable system of boats, goods, docks, taxes, and local memory.',
+        lnglat: [120.566863, 31.309902],
         x: 44,
         y: 62,
         challengeId: 'story-old-market',
       },
       {
         id: 'grand-canal-stop',
-        name: 'Grand Canal Walkway',
-        chineseName: '大运河步道',
-        description: 'End with the larger historical network of the Grand Canal.',
-        story: 'The canal connected regional economies and daily life. Maple Bridge is one poetic node inside this long water network.',
+        name: 'Yuyin Bridge',
+        chineseName: '渔隐桥',
+        description: 'Cross the ancient canal on a double-eaved bridge inside the Maple Bridge scenic area.',
+        story: '渔隐桥位于枫桥风景区内，横跨古运河，采用重檐歇山顶。水面与夕阳相映，让人无限向往，也是游览风景区时必经的一座桥。',
+        lnglat: [120.56833, 31.30818],
         x: 56,
         y: 78,
         challengeId: 'story-grand-canal',

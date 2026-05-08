@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { Bell, Camera, Clock, History, MapPin, Route as RouteIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ChallengeReward, JourneyProgress, ROUTES_DATA, RouteDetail } from '../types';
+import { AiGuideContext, ChallengeReward, JourneyProgress, ROUTES_DATA, RouteDetail } from '../types';
 import { cn } from '../lib/utils';
 import ImageWithFallback from './ImageWithFallback';
 import RouteDetailView from './RouteDetailView';
@@ -10,6 +10,8 @@ interface RoutesViewProps {
   progress: JourneyProgress;
   onCompleteChallenge: (reward: ChallengeReward) => void;
   onMarkVisited: (spotId: string) => void;
+  onAiContextChange: (context: AiGuideContext) => void;
+  onAiForceClose: () => void;
   initialRouteId?: string | null;
   onRouteOpened?: () => void;
 }
@@ -32,21 +34,48 @@ const routeMeta = {
   },
 };
 
+function getRoutesGuideContext(): AiGuideContext {
+  return {
+    view: 'routes',
+    routeTitle: 'Heritage Walk',
+    description: 'Recommended walking routes through Maple Bridge, Hanshan Temple, poetry landmarks, and canal culture.',
+  };
+}
+
+function getRouteGuideContext(route: RouteDetail): AiGuideContext {
+  return {
+    view: 'route-detail',
+    routeTitle: `${route.chineseTitle} ${route.title}`,
+    description: `${route.description} Distance: ${route.distance}. Duration: ${route.duration}. Best for: ${route.bestFor}.`,
+  };
+}
+
 export default function RoutesView({
   progress,
   onCompleteChallenge,
   onMarkVisited,
+  onAiContextChange,
+  onAiForceClose,
   initialRouteId,
   onRouteOpened,
 }: RoutesViewProps) {
   const [selectedRoute, setSelectedRoute] = useState<RouteDetail | null>(null);
+
+  const openRoute = (route: RouteDetail) => {
+    onAiContextChange(getRouteGuideContext(route));
+    setSelectedRoute(route);
+  };
+
+  useEffect(() => {
+    if (!selectedRoute) onAiContextChange(getRoutesGuideContext());
+  }, [onAiContextChange, selectedRoute]);
 
   useEffect(() => {
     if (!initialRouteId) return;
     const targetRoute = ROUTES_DATA.find((route) => route.id === initialRouteId);
     if (!targetRoute) return;
 
-    setSelectedRoute(targetRoute);
+    openRoute(targetRoute);
     onRouteOpened?.();
   }, [initialRouteId, onRouteOpened]);
 
@@ -88,7 +117,7 @@ export default function RoutesView({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.08 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setSelectedRoute(route)}
+              onClick={() => openRoute(route)}
               className="w-full overflow-hidden rounded-[2rem] bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="grid grid-cols-[7rem_1fr]">
@@ -145,7 +174,12 @@ export default function RoutesView({
           <RouteDetailView
             route={selectedRoute}
             progress={progress}
-            onClose={() => setSelectedRoute(null)}
+            onAiContextChange={onAiContextChange}
+            onAiForceClose={onAiForceClose}
+            onClose={() => {
+              setSelectedRoute(null);
+              onAiContextChange(getRoutesGuideContext());
+            }}
             onCompleteChallenge={onCompleteChallenge}
             onMarkVisited={onMarkVisited}
           />

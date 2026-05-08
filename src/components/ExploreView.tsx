@@ -1,13 +1,14 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Bell, BookOpen, Clock, Compass, MapPin, Pause, Play, Route } from 'lucide-react';
-import { ROUTES_DATA, SPOTS, Spot } from '../types';
+import { AiGuideContext, ROUTES_DATA, SPOTS, Spot } from '../types';
 import ImageWithFallback from './ImageWithFallback';
 import SpotDetailView from './SpotDetailView';
 
 interface ExploreViewProps {
   onNavigateRoutes: () => void;
   onMarkVisited: (spotId: string) => void;
+  onAiContextChange: (context: AiGuideContext) => void;
   initialSpotId?: string | null;
   onSpotOpened?: () => void;
   isMusicPlaying: boolean;
@@ -33,9 +34,28 @@ const insightCards = [
   },
 ];
 
+function getExploreGuideContext(): AiGuideContext {
+  return {
+    view: 'explore',
+    spotName: 'Maple Bridge and Hanshan Temple area',
+    description: 'Main exploration page for Maple Bridge heritage, temple bells, poetry, and Grand Canal culture.',
+  };
+}
+
+function getSpotGuideContext(spot: Spot): AiGuideContext {
+  return {
+    view: 'spot-detail',
+    spotName: `${spot.chineseName} ${spot.name}`,
+    description: spot.description,
+    story: `${spot.whyMatters}\n${spot.story}`,
+    poem: spot.poem,
+  };
+}
+
 export default function ExploreView({
   onNavigateRoutes,
   onMarkVisited,
+  onAiContextChange,
   initialSpotId,
   onSpotOpened,
   isMusicPlaying,
@@ -46,8 +66,13 @@ export default function ExploreView({
 
   const openSpot = (spot: Spot) => {
     onMarkVisited(spot.id);
+    onAiContextChange(getSpotGuideContext(spot));
     setSelectedSpot(spot);
   };
+
+  useEffect(() => {
+    if (!selectedSpot) onAiContextChange(getExploreGuideContext());
+  }, [onAiContextChange, selectedSpot]);
 
   useEffect(() => {
     if (!initialSpotId) return;
@@ -236,7 +261,11 @@ export default function ExploreView({
         {selectedSpot && (
           <SpotDetailView
             spot={selectedSpot}
-            onClose={() => setSelectedSpot(null)}
+            onAiContextChange={onAiContextChange}
+            onClose={() => {
+              setSelectedSpot(null);
+              onAiContextChange(getExploreGuideContext());
+            }}
             onNextRoute={() => {
               setSelectedSpot(null);
               onNavigateRoutes();

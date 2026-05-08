@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Compass, Route, Stamp, BookOpen, Pause, Play } from 'lucide-react';
+import { BookOpen, Compass, MessageCircle, Pause, Play, Route, Stamp } from 'lucide-react';
 import { AppView } from '../types';
 import { cn } from '../lib/utils';
 
@@ -21,6 +21,7 @@ export default function BottomNav({
   const items = [
     { id: AppView.EXPLORE, label: 'Explore', icon: Compass },
     { id: AppView.ROUTES, label: 'Routes', icon: Route },
+    { id: AppView.COMMUNITY, label: 'Community', icon: MessageCircle },
     { id: AppView.STAMPS, label: 'Seals', icon: Stamp },
     { id: AppView.PROFILE, label: 'Journey', icon: BookOpen },
   ];
@@ -47,7 +48,7 @@ export default function BottomNav({
             key={item.id}
             whileTap={{ scale: 0.9 }}
             onClick={() => onViewChange(item.id)}
-            className="flex flex-col items-center justify-center w-20 h-full relative"
+            className="flex flex-col items-center justify-center w-16 sm:w-20 h-full relative"
           >
             <div className={cn(
               "p-2 rounded-xl transition-all duration-300",

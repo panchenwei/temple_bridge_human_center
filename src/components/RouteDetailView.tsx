@@ -1,10 +1,9 @@
 import { AnimatePresence, motion } from 'motion/react';
-import type { PointerEvent } from 'react';
-import { useRef, useState } from 'react';
-import { BookOpen, Check, ChevronLeft, Clock, History, Map as MapIcon, MapPin, Music, X } from 'lucide-react';
-import { ChallengeReward, JourneyProgress, RouteDetail, RouteMarker } from '../types';
+import { useCallback, useEffect, useState } from 'react';
+import { BookOpen, Check, ChevronLeft, Clock, History, MapPin, Music, Navigation } from 'lucide-react';
+import { AiGuideContext, ChallengeReward, JourneyProgress, RouteDetail, RouteMarker } from '../types';
 import { cn } from '../lib/utils';
-import ImageWithFallback from './ImageWithFallback';
+import AmapRouteMap from './AmapRouteMap';
 import StoryGame from './StoryGame';
 
 interface RouteDetailViewProps {
@@ -13,18 +12,28 @@ interface RouteDetailViewProps {
   onClose: () => void;
   onCompleteChallenge: (reward: ChallengeReward) => void;
   onMarkVisited: (spotId: string) => void;
+  onAiContextChange: (context: AiGuideContext) => void;
+  onAiForceClose: () => void;
 }
 
-interface UserPin {
-  id: string;
-  x: number;
-  y: number;
+function getRouteGuideContext(route: RouteDetail): AiGuideContext {
+  return {
+    view: 'route-detail',
+    routeTitle: `${route.chineseTitle} ${route.title}`,
+    description: `${route.description} Distance: ${route.distance}. Duration: ${route.duration}. Best for: ${route.bestFor}.`,
+  };
 }
 
-function vibrate(duration = 35) {
-  if (window.navigator.vibrate) {
-    window.navigator.vibrate(duration);
-  }
+function getMarkerGuideContext(route: RouteDetail, marker: RouteMarker): AiGuideContext {
+  return {
+    view: 'route-marker-detail',
+    routeTitle: `${route.chineseTitle} ${route.title}`,
+    markerName: `${marker.chineseName} ${marker.name}`,
+    description: marker.description,
+    story: marker.story,
+    poem: marker.poem,
+    coordinates: marker.lnglat,
+  };
 }
 
 export default function RouteDetailView({
@@ -33,75 +42,31 @@ export default function RouteDetailView({
   onClose,
   onCompleteChallenge,
   onMarkVisited,
+  onAiContextChange,
+  onAiForceClose,
 }: RouteDetailViewProps) {
   const [selectedMarker, setSelectedMarker] = useState<RouteMarker | null>(null);
-  const [userPins, setUserPins] = useState<UserPin[]>([]);
-  const [pinToRemove, setPinToRemove] = useState<string | null>(null);
   const [showGame, setShowGame] = useState(false);
   const [routeStarted, setRouteStarted] = useState(false);
 
-  const mapRef = useRef<HTMLDivElement>(null);
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pinPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const visitedCount = route.markers.filter((marker) => progress.visitedSpots.includes(marker.id)).length;
 
-  const clearMapPress = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
+  const buildAmapNavigationUrl = (marker: RouteMarker) => {
+    const [lng, lat] = marker.lnglat;
+    const name = encodeURIComponent(marker.chineseName || marker.name);
+
+    return `https://uri.amap.com/navigation?to=${lng},${lat},${name}&mode=walk&policy=1&src=temple-bridge&coordinate=gaode&callnative=1`;
   };
 
-  const clearPinPress = () => {
-    if (pinPressTimer.current) {
-      clearTimeout(pinPressTimer.current);
-      pinPressTimer.current = null;
-    }
-  };
-
-  const handleMapPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    const { clientX, clientY } = event;
-    setPinToRemove(null);
-
-    pressTimer.current = setTimeout(() => {
-      if (!mapRef.current) return;
-      const rect = mapRef.current.getBoundingClientRect();
-      const x = Math.min(96, Math.max(4, ((clientX - rect.left) / rect.width) * 100));
-      const y = Math.min(96, Math.max(4, ((clientY - rect.top) / rect.height) * 100));
-
-      setUserPins((current) => [
-        ...current,
-        {
-          id: Math.random().toString(36).slice(2, 10),
-          x,
-          y,
-        },
-      ]);
-      vibrate(50);
-    }, 600);
-  };
-
-  const handlePinPointerDown = (event: PointerEvent<HTMLButtonElement>, pinId: string) => {
-    event.preventDefault();
-    event.stopPropagation();
-    clearMapPress();
-    pinPressTimer.current = setTimeout(() => {
-      setPinToRemove(pinId);
-      vibrate(50);
-    }, 450);
-  };
-
-  const removePin = (pinId: string) => {
-    setUserPins((current) => current.filter((pin) => pin.id !== pinId));
-    setPinToRemove(null);
-  };
-
-  const selectMarker = (marker: RouteMarker) => {
+  const selectMarker = useCallback((marker: RouteMarker) => {
     setSelectedMarker(marker);
     const el = document.getElementById(`marker-info-${marker.id}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+  }, []);
+
+  useEffect(() => {
+    onAiContextChange(selectedMarker ? getMarkerGuideContext(route, selectedMarker) : getRouteGuideContext(route));
+  }, [onAiContextChange, route, selectedMarker]);
 
   return (
     <motion.div
@@ -124,109 +89,12 @@ export default function RouteDetailView({
 
       <div className="mx-auto max-w-xl pb-24">
         <section className="relative aspect-square w-full overflow-hidden bg-stone-100">
-          <ImageWithFallback
-            src={route.mapImage}
-            alt={`${route.title} map`}
-            className="h-full w-full scale-110 object-cover opacity-65 grayscale"
-            fallbackTitle={route.chineseTitle}
-            fallbackSubtitle={route.mapImage}
+          <AmapRouteMap
+            route={route}
+            selectedMarkerId={selectedMarker?.id ?? null}
+            visitedSpotIds={progress.visitedSpots}
+            onSelectMarker={selectMarker}
           />
-          <div className="absolute inset-0 p-4">
-            <div
-              ref={mapRef}
-              onPointerDown={handleMapPointerDown}
-              onPointerUp={clearMapPress}
-              onPointerLeave={clearMapPress}
-              onPointerCancel={clearMapPress}
-              className="relative h-full w-full touch-none rounded-3xl border-2 border-dashed border-heritage-olive/20"
-            >
-              <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path
-                  d={route.markers.map((marker, index) => `${index === 0 ? 'M' : 'L'} ${marker.x} ${marker.y}`).join(' ')}
-                  fill="none"
-                  stroke="rgba(184,92,56,0.72)"
-                  strokeWidth="1.3"
-                  strokeDasharray="4 3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-
-              {route.markers.map((marker, index) => {
-                const isSelected = selectedMarker?.id === marker.id;
-                const isVisited = progress.visitedSpots.includes(marker.id);
-
-                return (
-                  <motion.button
-                    key={marker.id}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    whileHover={{ scale: 1.12 }}
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      selectMarker(marker);
-                    }}
-                    style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
-                    className={cn(
-                      'absolute z-20 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 shadow-2xl transition-all',
-                      isSelected ? 'border-white bg-heritage-red shadow-heritage-red/40' : 'border-white bg-heritage-olive shadow-heritage-olive/30',
-                    )}
-                  >
-                    {isVisited ? <Check className="h-5 w-5 text-white" /> : <span className="font-sans text-xs font-bold text-white">{index + 1}</span>}
-                  </motion.button>
-                );
-              })}
-
-              <AnimatePresence>
-                {userPins.map((pin) => (
-                  <motion.div
-                    key={pin.id}
-                    initial={{ scale: 0, y: -20, opacity: 0 }}
-                    animate={{ scale: 1, y: 0, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
-                    className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
-                  >
-                    <button
-                      onPointerDown={(event) => handlePinPointerDown(event, pin.id)}
-                      onPointerUp={clearPinPress}
-                      onPointerLeave={clearPinPress}
-                      onPointerCancel={clearPinPress}
-                      className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-heritage-red text-white shadow-xl"
-                      aria-label="Custom memory pin. Long press to remove."
-                    >
-                      <MapIcon className="h-5 w-5" />
-                    </button>
-
-                    {pinToRemove === pin.id && (
-                      <div
-                        className="absolute left-1/2 top-12 w-36 -translate-x-1/2 rounded-2xl bg-white p-2 text-center shadow-xl"
-                        onPointerDown={(event) => event.stopPropagation()}
-                      >
-                        <p className="px-2 pb-2 font-sans text-[10px] font-bold uppercase tracking-widest text-stone-400">Cancel marker?</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => removePin(pin.id)}
-                            className="rounded-xl bg-heritage-red px-2 py-2 font-sans text-[10px] font-bold uppercase text-white"
-                          >
-                            Remove
-                          </button>
-                          <button
-                            onClick={() => setPinToRemove(null)}
-                            className="rounded-xl bg-stone-100 px-2 py-2 font-sans text-[10px] font-bold uppercase text-stone-500"
-                          >
-                            Keep
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </div>
 
           <div className="pointer-events-none absolute left-6 right-6 top-6">
             <div className="max-w-xs rounded-2xl border border-white/50 bg-white/85 p-4 shadow-sm backdrop-blur-md">
@@ -340,6 +208,7 @@ export default function RouteDetailView({
                             onClick={(event) => {
                               event.stopPropagation();
                               setSelectedMarker(marker);
+                              onAiForceClose();
                               setShowGame(true);
                             }}
                             className={cn(
@@ -350,6 +219,17 @@ export default function RouteDetailView({
                             {isChallengeDone ? 'Story Unlocked' : 'Unlock Story'}
                           </button>
                         </div>
+
+                        <a
+                          href={buildAmapNavigationUrl(marker)}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="flex w-full items-center justify-center gap-2 rounded-full bg-heritage-ink px-4 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-white shadow-sm active:scale-95"
+                        >
+                          <Navigation className="h-4 w-4" />
+                          Open AMap Navigation
+                        </a>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -372,16 +252,6 @@ export default function RouteDetailView({
           />
         )}
       </AnimatePresence>
-
-      {pinToRemove && (
-        <button
-          onClick={() => setPinToRemove(null)}
-          className="fixed right-5 top-20 z-[65] flex h-10 w-10 items-center justify-center rounded-full bg-white text-stone-400 shadow-lg"
-          aria-label="Close pin remove menu"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      )}
     </motion.div>
   );
 }
