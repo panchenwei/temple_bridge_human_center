@@ -20,3 +20,8 @@ Temple Bridge Human Center is a mobile-first cultural guide for Maple Bridge, Ha
 - Encourages active exploration instead of passive reading through stamps, quizzes, route progress, and unlockable content.
 - Works for first-time visitors who need guidance and local residents who want to rediscover familiar places.
 - Uses a refined modern Chinese visual style inspired by bridges, canal water, ink, stone, and warm cinnabar accents.
+
+## GitHub Pages API
+
+GitHub Pages builds now read `VITE_API_BASE_URL` from the repository Actions variable.
+Set that variable in GitHub to your backend HTTPS origin, for example `https://api.example.com`.
