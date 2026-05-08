@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -955,14 +956,17 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
 const distDir = path.join(projectRoot, 'dist');
 const clientBase = '/temple_bridge_human_center';
-app.use(clientBase, express.static(distDir));
-app.use(express.static(distDir));
-app.get(`${clientBase}/*`, (_req, res) => {
-  res.sendFile(path.join(distDir, 'index.html'));
-});
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(distDir, 'index.html'));
-});
+
+if (fsSync.existsSync(path.join(distDir, 'index.html'))) {
+  app.use(clientBase, express.static(distDir));
+  app.use(express.static(distDir));
+  app.get(`${clientBase}/*`, (_req, res) => {
+    res.sendFile(path.join(distDir, 'index.html'));
+  });
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(distDir, 'index.html'));
+  });
+}
 
 ensureStorage().then(() => {
   app.listen(port, '0.0.0.0', () => {
