@@ -85,10 +85,10 @@ export default function AuthGate({ onAuthed, compact = false }: AuthGateProps) {
               <input
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
-                placeholder="展示名：2-24字，需包含中文"
+                placeholder="展示名：2-24位，支持中英文和常见符号"
                 className="w-full rounded-2xl border border-stone-100 bg-stone-50 px-4 py-4 font-sans text-sm outline-none focus:border-heritage-olive"
               />
-              <p className="-mt-1 px-1 font-sans text-[11px] text-stone-400">页面会优先显示这个中文昵称。</p>
+              <p className="-mt-1 px-1 font-sans text-[11px] text-stone-400">页面会优先显示这个展示名。</p>
             </>
           )}
           <input

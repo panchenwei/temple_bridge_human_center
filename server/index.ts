@@ -117,7 +117,6 @@ const maxMessagesPerUser = 500;
 const maxReturnedPosts = 100;
 const maxAiHistoryItems = 8;
 const idPattern = /^[a-z]+_[a-f0-9]{18}$/;
-const chineseDisplayNamePattern = /[\u3400-\u9fff]/;
 const controlCharPattern = /[\u0000-\u001f\u007f]/;
 const allowedOrigins = new Set([
   'http://localhost:3000',
@@ -362,11 +361,6 @@ function readDisplayName(source: Record<string, unknown>, field = 'displayName')
     label: 'Display name',
   });
   ensureNoControlChars(displayName, 'Display name');
-
-  if (!chineseDisplayNamePattern.test(displayName)) {
-    throw new HttpError(400, 'Display name must include Chinese characters.');
-  }
-
   return displayName;
 }
 
