@@ -236,7 +236,7 @@ export default function ProfileView({ progress, user, onUserChange, onCompleteCh
         <input
           value={displayName}
           onChange={(event) => setDisplayName(event.target.value)}
-          placeholder="display name"
+          placeholder="展示名：2-24字，需包含中文"
           className="w-full rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 font-sans text-sm outline-none focus:border-heritage-olive"
         />
         <div className="mt-3 grid grid-cols-2 gap-3">

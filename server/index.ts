@@ -117,6 +117,8 @@ const maxMessagesPerUser = 500;
 const maxReturnedPosts = 100;
 const maxAiHistoryItems = 8;
 const idPattern = /^[a-z]+_[a-f0-9]{18}$/;
+const chineseDisplayNamePattern = /[\u3400-\u9fff]/;
+const controlCharPattern = /[\u0000-\u001f\u007f]/;
 const allowedOrigins = new Set([
   'http://localhost:3000',
   'http://localhost:3001',
@@ -335,6 +337,37 @@ function readId(source: Record<string, unknown>, field: string, label = field) {
 
 function readParamId(req: Request, field: string, label = field) {
   return readId(req.params, field, label);
+}
+
+function ensureNoControlChars(value: string, label: string) {
+  if (controlCharPattern.test(value)) {
+    throw new HttpError(400, `${label} contains unsupported characters.`);
+  }
+}
+
+function readUsername(source: Record<string, unknown>, field = 'username') {
+  const username = readString(source, field, {
+    min: 2,
+    max: 32,
+    label: 'Username',
+  });
+  ensureNoControlChars(username, 'Username');
+  return username;
+}
+
+function readDisplayName(source: Record<string, unknown>, field = 'displayName') {
+  const displayName = readString(source, field, {
+    min: 2,
+    max: 24,
+    label: 'Display name',
+  });
+  ensureNoControlChars(displayName, 'Display name');
+
+  if (!chineseDisplayNamePattern.test(displayName)) {
+    throw new HttpError(400, 'Display name must include Chinese characters.');
+  }
+
+  return displayName;
 }
 
 function readAiContext(source: Record<string, unknown>): AiGuideContextPayload | undefined {
@@ -693,13 +726,9 @@ app.get('/api/health', (_req, res) => {
 
 app.post('/api/auth/register', authRateLimit, asyncRoute(async (req, res) => {
   const body = requestBody(req);
-  const username = readString(body, 'username', {
-    max: 20,
-    label: 'Username',
-    pattern: /^[a-z0-9_]{3,20}$/i,
-  }).toLowerCase();
+  const username = readUsername(body);
   const password = readString(body, 'password', { min: 6, max: 128, label: 'Password' });
-  const displayName = readOptionalString(body, 'displayName', { max: 24, label: 'Display name' }) ?? username;
+  const displayName = readDisplayName(body);
 
   const db = await readDb();
   if (db.users.some((user) => user.username === username)) {
@@ -728,11 +757,7 @@ app.post('/api/auth/register', authRateLimit, asyncRoute(async (req, res) => {
 
 app.post('/api/auth/login', authRateLimit, asyncRoute(async (req, res) => {
   const body = requestBody(req);
-  const username = readString(body, 'username', {
-    max: 20,
-    label: 'Username',
-    pattern: /^[a-z0-9_]{3,20}$/i,
-  }).toLowerCase();
+  const username = readUsername(body);
   const password = readString(body, 'password', { min: 6, max: 128, label: 'Password' });
   const db = await readDb();
   const user = db.users.find((item) => item.username === username);
@@ -762,7 +787,7 @@ app.post('/api/auth/logout', requireAuth, asyncRoute(async (req: AuthedRequest, 
 
 app.patch('/api/profile', writeRateLimit, requireAuth, asyncRoute(async (req: AuthedRequest, res) => {
   const body = requestBody(req);
-  const displayName = readOptionalString(body, 'displayName', { max: 24, label: 'Display name' });
+  const displayName = 'displayName' in body ? readDisplayName(body) : undefined;
   const db = await readDb();
   const user = db.users.find((item) => item.id === req.user!.id);
   if (!user) {

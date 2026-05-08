@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { publicAsset } from '../lib/assets';
@@ -19,6 +19,10 @@ export default function ImageWithFallback({
   fallbackSubtitle = 'Replace this with a local asset',
 }: ImageWithFallbackProps) {
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
 
   if (!src || hasError) {
     return (

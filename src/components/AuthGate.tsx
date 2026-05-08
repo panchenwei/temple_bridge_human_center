@@ -76,22 +76,25 @@ export default function AuthGate({ onAuthed, compact = false }: AuthGateProps) {
           <input
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="username"
+            placeholder="账号：2-32位，除控制字符外基本都可用"
             className="w-full rounded-2xl border border-stone-100 bg-stone-50 px-4 py-4 font-sans text-sm outline-none focus:border-heritage-olive"
             autoComplete="username"
           />
           {mode === 'register' && (
-            <input
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder="display name"
-              className="w-full rounded-2xl border border-stone-100 bg-stone-50 px-4 py-4 font-sans text-sm outline-none focus:border-heritage-olive"
-            />
+            <>
+              <input
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="展示名：2-24字，需包含中文"
+                className="w-full rounded-2xl border border-stone-100 bg-stone-50 px-4 py-4 font-sans text-sm outline-none focus:border-heritage-olive"
+              />
+              <p className="-mt-1 px-1 font-sans text-[11px] text-stone-400">页面会优先显示这个中文昵称。</p>
+            </>
           )}
           <input
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="password"
+            placeholder="密码：至少6位"
             type="password"
             className="w-full rounded-2xl border border-stone-100 bg-stone-50 px-4 py-4 font-sans text-sm outline-none focus:border-heritage-olive"
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
