@@ -4,9 +4,7 @@ Temple Bridge Human Center is a mobile-first cultural guide for Maple Bridge, Ha
 
 ## User Operation Guide
 
-Screenshots should be placed in `docs/screenshots/`. Use PNG files for README screenshots. PNG is recommended because it preserves UI text and transparent edges well; BMP is not recommended because it is usually much larger and less convenient for web documentation.
-
-Most README screenshots are long-scroll captures. Floating UI such as the AI guide may appear fixed inside a long screenshot, but this is only a screenshot artifact. In the actual website, the AI guide remains an interactive floating widget and does not stay stuck or cause page stutter.
+The interface screenshots in this README are provided as PNG images to keep text, icons, and interface edges clear. BMP is intentionally avoided because it creates unnecessarily large documentation assets. Several screenshots are long-scroll captures; if a floating element such as the AI guide appears repeated or fixed in the capture, that is only a screenshot artifact. In the live website, the AI guide remains responsive and does not cause the page to freeze or stutter.
 
 ### 1. Global Navigation
 
@@ -260,24 +258,84 @@ Visible controls and interactions:
 
 ## Technologies Used
 
-- Frontend framework: React 19 with React DOM.
-- Language: TypeScript and TSX.
-- Build tool: Vite 6 with `@vitejs/plugin-react` and `@tailwindcss/vite`.
-- CSS and UI: Tailwind CSS v4, custom theme tokens in `src/index.css`, custom utilities such as `xuan-paper`, `glass-nav`, `poem-box`, and AMap marker CSS.
-- Animation: `motion/react` for page, overlay, card, button, and reward animations; CSS transitions for hover states.
-- Icons: `lucide-react`.
-- Assets: public images under `public/images`, `public/bridge-icon.svg`, and `public/audio/maple-bridge-bgm.mp3`; `ImageWithFallback` provides visual fallback states for missing images.
-- Maps and external navigation: Gaode/AMap JavaScript API v2 with Scale, ToolBar, and Walking plugins; external AMap navigation URLs use `uri.amap.com/navigation`.
-- API and data: browser requests go through `/api/*`; the live frontend API origin is `https://api2.pa1018.cn`.
-- Live-site variables referenced by the frontend: `VITE_API_BASE_URL` points to `https://api2.pa1018.cn`; `VITE_AMAP_KEY` and `VITE_AMAP_SECURITY_JS_CODE` enable the Gaode/AMap map, but their concrete values should stay out of the public README.
-- Server-only variables referenced by source but not documented with values here: `AI_API_KEY`, `AI_MODEL_ID`, `AI_OPENAI_URL`, and `PORT`.
-- Server: Express 4, Node.js built-in `crypto`, file-system JSON storage, static upload serving, rate limiting, password hashing with PBKDF2, and plain JSON API endpoints.
-- AI service: server-side OpenAI-compatible chat completions endpoint for the AI guide. The code does not call `@google/genai` directly.
-- State and persistence: React state, browser `localStorage` for journey progress and auth token, and server JSON files for users, sessions, posts, messages, and uploaded images.
-- Utility libraries: `clsx` and `tailwind-merge` through the local `cn` helper.
-- Tooling: TypeScript compiler settings, `tsx` for server TypeScript execution, Node and Express type packages, and the package lockfile.
-- Included but not actively used in current source: `@google/genai` and `react-markdown`.
+### Frontend Application
+
+- Framework: React 19 with React DOM, organized as a single-page application controlled by React state in `App.tsx`.
+- Language: TypeScript and TSX are used for component props, data models, route markers, user profiles, community posts, direct messages, and AI guide context.
+- View structure: the app switches between `Explore`, `Routes`, `Community`, `Seals`, and `Journey` through the `AppView` enum instead of a router library.
+- Main layout: `TopBar`, `BottomNav`, `SearchOverlay`, and `AiGuideWidget` stay outside the active page view so they can remain available across the whole site.
+- Component architecture: major user-facing areas are split into `ExploreView`, `SpotDetailView`, `RoutesView`, `RouteDetailView`, `StoryGame`, `StampsView`, `CommunityView`, `ProfileView`, and `AuthGate`.
+
+### UI, Styling, And Interaction
+
+- Styling system: Tailwind CSS v4 is integrated through `@tailwindcss/vite`.
+- Design tokens: `src/index.css` defines the heritage paper, ink, red, and olive colors, plus serif and sans-serif font stacks.
+- Custom CSS utilities: `xuan-paper`, `glass-nav`, `poem-box`, `vertical-text`, `olive-green`, and `hide-scrollbar` support the Jiangnan ink-paper visual style.
+- Map styling: AMap marker classes such as `amap-route-marker`, `amap-route-marker-selected`, `amap-route-marker-visited`, and `amap-user-pin-menu` style route stops and custom memory pins.
+- Animation library: `motion/react` is used for overlay transitions, route cards, spot buttons, search panels, quiz rewards, AI guide opening and closing, and lightweight tap feedback.
+- Icon system: `lucide-react` supplies interface icons such as search, user, route, stamp, camera, mail, send, navigation, play, pause, and close.
+- Utility helpers: `clsx` and `tailwind-merge` are combined in the local `cn` helper to merge conditional Tailwind class names safely.
+
+### Content, Media, And Assets
+
+- Image assets: scenic, route, profile, story, and summary images are stored under `public/images`.
+- Audio asset: the background music uses `public/audio/maple-bridge-bgm.mp3`.
+- Icon asset: the top-bar brand mark uses `public/bridge-icon.svg`.
+- Asset path handling: `publicAsset()` reads Vite's base path and keeps public assets working under the published site path.
+- Image resilience: `ImageWithFallback` replaces missing or failed images with a styled visual fallback instead of leaving broken image icons.
+- README screenshots: documentation screenshots are PNG files under `docs/screenshots`; PNG is used for sharper UI text, while BMP is avoided because it is too large for practical documentation.
+
+### Map And Route Navigation
+
+- Map provider: Gaode/AMap JavaScript API v2 powers the route detail map.
+- AMap plugins: Scale, ToolBar, and Walking are requested by the map loader.
+- Route rendering: route markers are created from `ROUTES_DATA`, and the walking path is drawn as a dashed polyline.
+- Marker interaction: clicking a route marker selects the matching landmark card and scrolls it into view.
+- Visit progress: visited route markers are visually changed to an `OK` state and recorded in journey progress.
+- Custom memory pins: long pressing the map creates a user memory pin; long pressing that pin opens `Remove` and `Keep` actions.
+- External navigation: `Open AMap Navigation` creates a `uri.amap.com/navigation` walking-navigation link for the selected landmark.
+- Map fallback: if the AMap script or key is unavailable, the map panel shows a clear `Map key needed` fallback message.
+
+### User State And Progress
+
+- Journey progress: score, completed challenges, visited spots, unlocked stories, and collected stamps are stored in browser `localStorage`.
+- Auth token: the browser stores the session token in `localStorage` under a project-specific key.
+- Spot visits: opening spot details marks a heritage spot as visited.
+- Route challenges: story quizzes add points, stamps, and unlocked story records only once per challenge.
+- Profile mini game: the Journey page has a separate one-time scoring question.
+- Share and save actions: the Journey page uses the Web Share API when available, falls back to clipboard copying, and can generate a text summary file.
+
+### Backend And API
+
+- Server framework: Express 4 handles authentication, profile updates, community posts, comments, private messages, uploaded media, and AI chat requests.
+- Data storage: server-side JSON files store users, sessions, community posts, comments, and direct messages.
+- Upload handling: uploaded avatar and post images are accepted as data URLs and saved under server upload folders.
+- Password handling: passwords are salted and hashed with Node.js `crypto.pbkdf2Sync`.
+- Session handling: login and registration create session tokens; logout removes the current session.
+- Validation: request bodies, IDs, usernames, display names, comments, posts, messages, AI context, and uploaded image sizes are validated server-side.
+- Rate limiting: separate in-memory request buckets limit authentication, write, and AI requests.
+- Security headers: the server disables the Express signature and sets response headers such as `X-Content-Type-Options`, `Referrer-Policy`, and `X-Frame-Options`.
+- CORS: the server allows configured origins for browser API calls.
+- Live API origin: the published frontend points API requests to `https://api2.pa1018.cn`.
+
+### AI Guide
+
+- AI feature: the floating guide sends the current page, spot, route, or landmark context with the user's question.
+- Prompt behavior: the server prompt asks the guide to answer as `枫桥小导游`, prioritize the current page data, and avoid inventing unsupported real-time facts.
+- API style: the server sends chat requests to an external AI API and returns the generated guide response to the frontend.
+- Response handling: AI responses are normalized into plain text before being returned to the frontend.
+- Source variables: the server references AI key, model, and endpoint settings, but their values and provider details are intentionally not shown in the public README.
+
+### Build And Tooling Stack
+
+- Build foundation: Vite 6 is used with `@vitejs/plugin-react` and `@tailwindcss/vite`.
+- Type checking: TypeScript configuration files cover the client and server code.
+- Server TypeScript tooling: `tsx` is included for TypeScript-based server execution workflows.
+- Package metadata: `package.json` and the lockfile record the exact dependency graph used by the project.
+- Included but not actively used in current source: `react-markdown` and an unused AI SDK dependency listed in the package metadata.
 - Not used: Three.js, React Router, Redux/Zustand, Leaflet, Mapbox, and in-app Markdown rendering.
+- Frontend environment names referenced by source: `VITE_API_BASE_URL`, `VITE_AMAP_KEY`, and `VITE_AMAP_SECURITY_JS_CODE`.
+- Server environment names referenced by source: AI key, model, endpoint, and `PORT` settings.
 
 ## Project Structure
 
