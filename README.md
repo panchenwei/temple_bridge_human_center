@@ -1,10 +1,40 @@
 # Temple Bridge Human Center
 
-Temple Bridge Human Center is a mobile-first cultural guide for Maple Bridge, Hanshan Temple, Tieling Pass, and the Grand Canal. The published site combines route guidance, cultural stories, community check-ins, profile progress, and an AI guide.
+Temple Bridge Human Center is a mobile-first cultural guide for Maple Bridge, Hanshan Temple, Tieling Pass, and the Grand Canal. The published site combines route guidance, cultural stories, community check-ins, profile progress, personal journey records, and an AI guide for cultural questions.
+
+## Submission Information
+
+Group ID: A2-1  
+Project Title: Maple Bridge / Suzhou Whispers  
+Module: CPT208 Human-Centric Computing  
+Live URL: https://panchenwei.github.io/temple_bridge_human_center/  
+GitHub Repository: https://github.com/panchenwei/temple_bridge_human_center
+
+## Local Setup
+
+Install project dependencies first:
+
+```bash
+npm install
+```
+
+Start the backend API in one terminal:
+
+```bash
+npm run api
+```
+
+Start the frontend development server in another terminal:
+
+```bash
+npm run dev
+```
+
+The backend API uses port `3001` by default. The frontend development server uses the Vite port configured in `package.json`, which is `3000`.
 
 ## User Operation Guide
 
-The interface screenshots in this README are provided as PNG images to keep text, icons, and interface edges clear. BMP is intentionally avoided because it creates unnecessarily large documentation assets. Several screenshots are long-scroll captures; if a floating element such as the AI guide appears repeated or fixed in the capture, that is only a screenshot artifact. In the live website, the AI guide remains responsive and does not cause the page to freeze or stutter.
+The interface screenshots in this README are provided as PNG images to keep text, icons, and interface edges clear. BMP is intentionally avoided because it creates unnecessarily large documentation assets. Several screenshots are long-scroll captures; if a floating element such as the AI guide appears repeated or fixed in the capture, that is only a screenshot artifact. In the live website, floating interface elements remain responsive and do not cause the page to freeze or stutter.
 
 ### 1. Global Navigation
 
@@ -59,7 +89,7 @@ Visible controls and interactions:
 - `Next Stop`: closes the detail overlay and switches to the Routes page.
 - `Old Memory` and `Now Scene` images: static comparison images for the selected spot.
 - `Why This Place Matters` and `Story Card`: static story sections. If the selected spot has a poem, the poem appears inside the story card.
-- Opening a spot updates the AI guide context to that specific place.
+- Opening a spot marks the selected heritage place as visited and updates the AI guide context to that specific place.
 
 ### 4. Search Guide Overlay
 
@@ -114,7 +144,7 @@ Visible controls and interactions:
 - Landmark cards: clicking a card selects it and expands its story details.
 - `Mark Visited`: marks the selected landmark as visited.
 - `Visited`: shown after a landmark has been marked visited. Clicking it has no new effect beyond keeping the visited state.
-- `Unlock Story`: opens the Story Game modal for the selected landmark and closes the AI guide panel.
+- `Unlock Story`: opens the Story Game modal for the selected landmark and closes the AI guide panel so the quiz stays clear.
 - `Story Unlocked`: shown after the challenge is completed. It can still open the Story Game replay, but points are not added twice.
 - `Open AMap Navigation`: opens an external AMap walking navigation URL in a new tab or native AMap flow when supported.
 - If the map service is unavailable, the map area shows a `Map key needed` fallback message instead of the interactive map.
@@ -238,7 +268,7 @@ Visible controls and interactions:
 
 ### 13. AI Guide Panel
 
-**Page / Area:** Floating AI assistant for current page, spot, route, or landmark context.
+**Page / Area:** Floating AI guide for the current page, spot, route, or landmark.
 
 ![AI guide screenshot placeholder](docs/screenshots/13-ai-guide.png)
 
@@ -246,15 +276,15 @@ Visible controls and interactions:
 
 - Launcher `枫桥小导游` / `Ask AI`: opens the panel.
 - Close icon button, accessible label `Close AI guide`: closes the panel.
-- Quick prompt `介绍一下这里`: sends that prompt to the AI guide.
-- Quick prompt `这条路线怎么走？`: sends that prompt to the AI guide.
-- Quick prompt `这个景点和诗有什么关系？`: sends that prompt to the AI guide.
-- Quick prompt `帮我推荐拍照打卡点`: sends that prompt to the AI guide.
-- Input `问问枫桥故事`: writes a custom message, up to 500 characters.
-- Send icon button, accessible label `Send AI guide message`: sends the custom message. It is disabled when the input is empty or the AI request is loading.
+- Quick prompt `介绍一下这里`: asks for an introduction to the current page or place.
+- Quick prompt `这条路线怎么走？`: asks for route guidance.
+- Quick prompt `这个景点和诗有什么关系？`: asks about the link between the current place and poetry.
+- Quick prompt `帮我推荐拍照打卡点`: asks for photo check-in suggestions.
+- Input `问问枫桥故事`: lets the visitor type a custom question, up to 500 characters.
+- Send icon button, accessible label `Send AI guide message`: sends the custom message. It is disabled when the input is empty or a reply is loading.
 - Loading state `小导游正在整理答案`: shown while waiting for a reply.
-- The panel scrolls to the newest message. Its context label changes based on the active page, selected spot, route, or landmark.
-- Opening search or a route story challenge can force-close the AI guide to keep the overlay clear.
+- The panel keeps recent messages and scrolls to the newest reply. Its context label changes based on the active page, selected spot, route, or landmark.
+- Opening search or a route story challenge can force-close the panel to avoid covering the main task.
 
 ## Technologies Used
 
@@ -307,24 +337,23 @@ Visible controls and interactions:
 
 ### Backend And API
 
-- Server framework: Express 4 handles authentication, profile updates, community posts, comments, private messages, uploaded media, and AI chat requests.
+- Server framework: Express 4 handles authentication, profile updates, community posts, comments, private messages, uploaded media, and AI guide requests.
 - Data storage: server-side JSON files store users, sessions, community posts, comments, and direct messages.
 - Upload handling: uploaded avatar and post images are accepted as data URLs and saved under server upload folders.
 - Password handling: passwords are salted and hashed with Node.js `crypto.pbkdf2Sync`.
 - Session handling: login and registration create session tokens; logout removes the current session.
-- Validation: request bodies, IDs, usernames, display names, comments, posts, messages, AI context, and uploaded image sizes are validated server-side.
-- Rate limiting: separate in-memory request buckets limit authentication, write, and AI requests.
+- Validation: request bodies, IDs, usernames, display names, comments, posts, messages, AI guide context, and uploaded image sizes are validated server-side.
+- Rate limiting: separate in-memory request buckets limit authentication, write, and AI guide requests.
 - Security headers: the server disables the Express signature and sets response headers such as `X-Content-Type-Options`, `Referrer-Policy`, and `X-Frame-Options`.
 - CORS: the server allows configured origins for browser API calls.
 - Live API origin: the published frontend points API requests to `https://api2.pa1018.cn`.
 
 ### AI Guide
 
-- AI feature: the floating guide sends the current page, spot, route, or landmark context with the user's question.
-- Prompt behavior: the server prompt asks the guide to answer as `枫桥小导游`, prioritize the current page data, and avoid inventing unsupported real-time facts.
-- API style: the server sends chat requests to an external AI API and returns the generated guide response to the frontend.
-- Response handling: AI responses are normalized into plain text before being returned to the frontend.
-- Source variables: the server references AI key, model, and endpoint settings, but their values and provider details are intentionally not shown in the public README.
+- The floating guide sends the current page context together with the visitor's question.
+- The server prepares a short cultural-guide prompt and forwards the request to an external AI API.
+- The response is cleaned into plain text before it is shown in the panel.
+- The implementation does not expose the provider details or secret values in the public repository.
 
 ### Build And Tooling Stack
 
